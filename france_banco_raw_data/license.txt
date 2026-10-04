@@ -1,0 +1,4 @@
+BANCO — Base nationale des commerces ouverte, publiée sur data.gouv.fr.
+Source officielle : https://www.data.gouv.fr/datasets/base-nationale-des-commerces-ouverte
+
+Veuillez vérifier la licence applicable au jeu de données sur la page de publication officielle.

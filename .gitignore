@@ -1,0 +1,24 @@
+# Python and notebook artifacts
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local environments and secrets
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+kaggle.json
+**/kaggle.json
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Datasets and generated data exports: store these in the Kaggle Dataset
+*.csv
+*.osm.pbf

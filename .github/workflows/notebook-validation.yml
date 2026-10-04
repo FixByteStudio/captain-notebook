@@ -1,0 +1,40 @@
+name: Validate notebooks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install notebook validator
+        run: python -m pip install --upgrade nbformat
+
+      - name: Validate notebook files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import nbformat
+
+          notebooks = sorted(Path(".").rglob("*.ipynb"))
+          if not notebooks:
+              raise SystemExit("No notebook files were found.")
+
+          for path in notebooks:
+              notebook = nbformat.read(path, as_version=4)
+              nbformat.validate(notebook)
+              print(f"Valid: {path}")
+          PY
