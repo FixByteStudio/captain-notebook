@@ -1,0 +1,86 @@
+name: Deploy notebooks to Kaggle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "france_food_delivery_prospects.ipynb"
+      - "tours_food_delivery_market_analysis.ipynb"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - notebook: france_food_delivery_prospects.ipynb
+            kernel_id: medsassi/france-food-delivery-prospects
+          - notebook: tours_food_delivery_market_analysis.ipynb
+            kernel_id: medsassi/tours-food-delivery-market-analysis
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: ${{ matrix.kernel_id }}
+      NOTEBOOK_FILE: ${{ matrix.notebook }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Kaggle CLI
+        run: python -m pip install --upgrade kaggle
+
+      - name: Check Kaggle API token
+        run: |
+          if [ -z "$KAGGLE_API_TOKEN" ]; then
+            echo "Add the KAGGLE_API_TOKEN Actions secret to enable deployment."
+            exit 1
+          fi
+
+      - name: Pull existing kernel and metadata
+        run: |
+          package_dir="$RUNNER_TEMP/kaggle-kernel"
+          mkdir -p "$package_dir"
+          kaggle kernels pull "$KAGGLE_KERNEL_ID" --path "$package_dir" --metadata
+          echo "KAGGLE_PACKAGE_DIR=$package_dir" >> "$GITHUB_ENV"
+
+      - name: Replace only the notebook source
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          package_dir = Path(os.environ["KAGGLE_PACKAGE_DIR"]).resolve()
+          source = Path(os.environ["NOTEBOOK_FILE"])
+          metadata_path = package_dir / "kernel-metadata.json"
+          metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+          if metadata.get("id") != os.environ["KAGGLE_KERNEL_ID"]:
+              raise SystemExit(f"Pulled kernel metadata does not match {os.environ['KAGGLE_KERNEL_ID']}.")
+
+          code_file = Path(metadata["code_file"])
+          if code_file.is_absolute() or ".." in code_file.parts or code_file.suffix.lower() != ".ipynb":
+              raise SystemExit(f"Unexpected Kaggle notebook code_file: {code_file}")
+          target = (package_dir / code_file).resolve()
+          if not target.is_relative_to(package_dir):
+              raise SystemExit("Kaggle notebook code_file points outside the pulled package.")
+
+          target.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(source, target)
+
+          if list(package_dir.rglob("*.csv")):
+              raise SystemExit("Unexpected CSV file in the Kaggle deployment package.")
+          print(f"Prepared {source} for {metadata['id']} at {code_file}; kept pulled metadata unchanged.")
+          PY
+
+      - name: Push and run on Kaggle
+        run: kaggle kernels push --path "$KAGGLE_PACKAGE_DIR"
