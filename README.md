@@ -1,4 +1,4 @@
-# France Food Delivery Market Analysis
+# Food Delivery Market Analysis
 
 This project combines official French business and population data with OpenStreetMap venue and cuisine data to explore food-delivery prospecting opportunities in France and Tours. The notebooks produce exploratory statistics and charts; venue counts and population-normalized rates describe mapped supply, not measured delivery demand.
 
